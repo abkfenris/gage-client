@@ -1,6 +1,14 @@
 from itsdangerous import JSONWebSignatureSerializer
 import requests
 
+class AuthenticationError(Exception):
+    """
+    Failed to authenticate with server
+    """
+    def __init__(self, arg):
+        self.args = arg
+
+
 class Client(object):
     def __init__(self, url, id, password):
         """
@@ -13,8 +21,8 @@ class Client(object):
         """
         self.url = url
         self.id = id
-        self.password = password
-        self.samples = {}
+        self.serializer = JSONWebSignatureSerializer(password)
+        self.samples = []
 
     def reading(self, sensor, dt, value):
         """
@@ -25,32 +33,26 @@ class Client(object):
             dt (datetime string): Datetime string of sensor reading
             value (float): Float value of sensor reading
         """
-        try:
-            self.samples[sensor][dt] = value
-        except KeyError:
-            self.samples[sensor] = {}
-            self.samples[sensor][dt] = value
+        self.samples.append({'type': sensor,
+                                 'datetime': dt,
+                                 'value': value})
 
     def send_all(self):
         """
         Send all samples to server
         """
-        samples = []
-        for sensor in self.samples:
-            for dt in self.samples[sensor]:
-                samples.append({'type': sensor,
-                                'datetime': dt,
-                                'value': self.samples[sensor][dt]})
 
-        payload = {'samples': samples,
+        payload = {'samples': self.samples,
                    'gage': {'id': self.id}}
 
-        s = JSONWebSignatureSerializer(self.password)
+        data = self.serializer.dumps(payload)
 
-        data = s.dumps(payload)
-        print 'sending:'
-        print payload
-        print 'Signature:'
-        print data
-        print 'to:'
-        print self.url
+        r = requests.post(self.url, data=data)
+
+        print r.json()
+
+        if r.status_code is 401:
+            raise AuthenticationError
+        elif r.status_code is 200 and r.json()['result'] == 'created':
+            return (True, r.json()['samples'])
+        return False
