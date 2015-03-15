@@ -10,6 +10,42 @@ class AuthenticationError(Exception):
 
 
 class Client(object):
+    """
+    Generic API Client
+    """
+    def __new__(cls, url, id, password):
+        """
+        Builds the right client class for the API based on the url given
+        """
+        if '/0.1' in url:
+            return Client_0_1.__new__(Client_0_1, url, id, password)
+
+    def __init__(self, url, id, password):
+        """
+        Initialize a new client
+
+        Parameters:
+            url (str): URL for aPI endpoint
+            id (int): Client ID number
+            password (str): Password string to submit samples
+        """
+        raise NotImplementedError
+
+    def reading(self, sensor, dt, value):
+        """
+        Add a new reading to the ones the Client will send to the server
+        """
+        raise NotImplementedError
+
+    def send_all(self):
+        raise NotImplementedError
+
+
+class Client_0_1(Client):
+    def __new__(cls, url, id, password):
+        instance = object.__new__(Client_0_1)
+        return instance
+
     def __init__(self, url, id, password):
         """
         Initialize a new client
