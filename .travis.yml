@@ -5,6 +5,6 @@ python:
 # install dependencies
 install: "pip install -r dev-requirements.txt"
 # run tests
-script: nosetests
+script: nosetests --cover-package=gage_client --with-xcoverage
 after_sucess:
     - coveralls
