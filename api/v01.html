@@ -1,0 +1,304 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>API Version 0.1 &mdash; gage_client 0.1 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic|Roboto+Slab:400,700|Inconsolata:400,700&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="gage_client 0.1 documentation" href="../index.html"/>
+        <link rel="prev" title="Welcome to gage_client’s documentation!" href="../index.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        
+          <a href="../index.html" class="fa fa-home"> gage_client</a>
+        
+        
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+          
+          
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="">API Version 0.1</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#an-example-exchange">An Example Exchange</a></li>
+</ul>
+</li>
+</ul>
+
+          
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">gage_client</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+    <li>API Version 0.1</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          <a href="../_sources/api/v01.txt" rel="nofollow"> View page source</a>
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document">
+            
+  <div class="section" id="api-version-0-1">
+<h1>API Version 0.1<a class="headerlink" href="#api-version-0-1" title="Permalink to this headline">¶</a></h1>
+<p>The version 0.1 of the API uses <a class="reference external" href="https://tools.ietf.org/html/draft-ietf-jose-json-web-signature-41">JSON Web Signatures</a>, specifically the
+<a class="reference external" href="http://pythonhosted.org/itsdangerous/#json-web-signatures">itsdangerous implementation</a> (which is a lot more readable).</p>
+<p>Using JSON Web Signatures allows us to preshare a secret between the server
+and the gage. This allows for less traffic on constrained connections than even
+an HTTPS handshake.</p>
+<p><code class="docutils literal"><span class="pre">itsdangerous.JSONWebSignatureSerializer(password)</span></code> is used to load and dump the
+JSON to and from a string using the shared password.</p>
+<p>If the server is unable to decode the serialized json, then it will return:</p>
+<div class="highlight-http"><div class="highlight"><pre><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.0</span> <span class="m">401</span> <span class="ne">UNAUTHORIZED</span>
+<span class="na">Connection</span><span class="o">:</span> <span class="l">close</span>
+<span class="na">Content-Length</span><span class="o">:</span> <span class="l">60</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Date</span><span class="o">:</span> <span class="l">Sun, 29 Mar 2015 01:41:02 GMT</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Werkzeug/0.10.1 Python/2.7.9</span>
+
+<span class="p">{</span>
+    <span class="nt">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;unauthorized&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;bad signature&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The client is able to send multiple samples at a time, and can keep track of
+which samples were sucessfully recieved by the server, and which ones were
+rejected. The client will attempt to resend any samples that were not recgonized
+by the server.</p>
+<div class="section" id="an-example-exchange">
+<h2>An Example Exchange<a class="headerlink" href="#an-example-exchange" title="Permalink to this headline">¶</a></h2>
+<p>Let&#8217;s work through a whole exchange between the sever and client. The code will
+be in python, but if the JSON Web Signature, and the JSON it is fed is structured
+the same way in another language, it should work the same.</p>
+<div class="section" id="client-setup">
+<h3>Client setup<a class="headerlink" href="#client-setup" title="Permalink to this headline">¶</a></h3>
+<p>The client can be initialized with <code class="docutils literal"><span class="pre">Client_0_1</span></code> to specify the API version,
+but if <code class="docutils literal"><span class="pre">Client</span></code> is used, then it will get the correct API version from the url
+string, and initialize the right subclass instead.</p>
+<p><code class="docutils literal"><span class="pre">Client</span></code> takes a url, an <code class="docutils literal"><span class="pre">id</span></code> and the shared password. Client checks for
+<code class="docutils literal"><span class="pre">/0.1</span></code> in the url to choose the correct version of the API.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">gage_client</span> <span class="kn">import</span> <span class="n">Client</span>
+
+<span class="n">c</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="s">&#39;http://example.com/api/0.1/gages/3&#39;</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="s">&#39;password&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="adding-readings">
+<h3>Adding Readings<a class="headerlink" href="#adding-readings" title="Permalink to this headline">¶</a></h3>
+<p>Now that we&#8217;ve got the client <code class="docutils literal"><span class="pre">c</span></code> created, we can start adding some sensor
+readings.</p>
+<p>A reading takes the type of reading, a datetime string
+(&#8216;YYYY-MM-DD HH:MM:SS.SSSSSS&#8217;), the value of the reading (a float), and
+optionally an id number. The id number is to identify the reading locally on the
+gage, so if there is a failure, or sucess and only the right values need to be
+resent.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">c</span><span class="o">.</span><span class="n">reading</span><span class="p">(</span><span class="s">&#39;level&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()),</span> <span class="mf">4.4</span><span class="p">)</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<p>To return the current samples that the client has queued to send:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">c</span><span class="o">.</span><span class="n">readings</span><span class="p">()</span>
+<span class="go">[{&#39;sender_id&#39;: 0, &#39;type&#39;: &#39;level&#39;, &#39;value&#39;: 4.4, &#39;datetime&#39;: &#39;2015-03-28 22:16:40.485660&#39;}]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="formed-json-before-getting-serialized">
+<h3>Formed JSON before getting serialized<a class="headerlink" href="#formed-json-before-getting-serialized" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s">&#39;gage&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="mi">3</span>
+    <span class="p">},</span>
+    <span class="s">&#39;samples&#39;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s">&#39;datetime&#39;</span><span class="p">:</span> <span class="s">&#39;2015-03-28 21:18:23.662830&#39;</span><span class="p">,</span>
+            <span class="s">&#39;sender_id&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;level&#39;</span><span class="p">,</span>
+            <span class="s">&#39;value&#39;</span><span class="p">:</span> <span class="mf">4.2</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="post">
+<h3>POST<a class="headerlink" href="#post" title="Permalink to this headline">¶</a></h3>
+<p>215 bytes</p>
+<div class="highlight-http"><div class="highlight"><pre>POST /api/0.1/gages/3/sample HTTP/1.1
+Host: 542b3900.ngrok.com
+User-Agent: python-requests/2.6.0 CPython/2.7.9 Darwin/14.1.0
+Content-Length: 215
+Accept: */*
+Accept-Encoding: gzip, deflate
+Connection: close
+X-Forwarded-Proto: https
+X-Real-Ip: 24.39.6.66
+
+eyJhbGciOiJIUzI1NiJ9.eyJnYWdlIjp7ImlkIjozfSwic2FtcGxlcyI6W3sic2VuZGVyX2lkIj
+owLCJ0eXBlIjoibGV2ZWwiLCJ2YWx1ZSI6NC4yLCJkYXRldGltZSI6IjIwMTUtMDMtMjggMjE6M
+Tg6MjMuNjYyODMwIn1dfQ._EA0StNTzfU84AUUd-Va8uI-fWkrOpY6qqg8AnGPyFg
+</pre></div>
+</div>
+</div>
+<div class="section" id="response">
+<h3>Response<a class="headerlink" href="#response" title="Permalink to this headline">¶</a></h3>
+<p>415 bytes</p>
+<div class="highlight-http"><div class="highlight"><pre><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.0</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Connection</span><span class="o">:</span> <span class="l">close</span>
+<span class="na">Content-Length</span><span class="o">:</span> <span class="l">413</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Date</span><span class="o">:</span> <span class="l">Sun, 29 Mar 2015 01:18:33 GMT</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Werkzeug/0.10.1 Python/2.7.9</span>
+
+<span class="p">{</span>
+    <span class="nt">&quot;gage&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+        <span class="nt">&quot;location&quot;</span><span class="p">:</span> <span class="s2">&quot;Bear River near RT 2 in Newry Maine&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Bear River at Newry&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;url&quot;</span><span class="p">:</span> <span class="s2">&quot;http://example.com/api/0.1/gages/3&quot;</span>
+    <span class="p">},</span>
+    <span class="nt">&quot;result&quot;</span><span class="p">:</span> <span class="s2">&quot;created&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;samples&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+                <span class="nt">&quot;datetime&quot;</span><span class="p">:</span> <span class="s2">&quot;2015-03-28 21:18:23.662830&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="mi">48150</span><span class="p">,</span>
+                <span class="nt">&quot;sender_id&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="nt">&quot;url&quot;</span><span class="p">:</span> <span class="s2">&quot;http://542b3900.ngrok.com/api/0.1/samples/48150&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;value&quot;</span><span class="p">:</span> <span class="mf">4.2</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="../index.html" class="btn btn-neutral" title="Welcome to gage_client’s documentation!"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Alex Kerney.
+    </p>
+  </div>
+
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
