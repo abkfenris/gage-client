@@ -2,12 +2,21 @@ from itsdangerous import JSONWebSignatureSerializer
 import requests
 import logging
 
-class AuthenticationError(Exception):
+
+class SendError(Exception):
+    """
+    Error during sending
+    """
+    # http://stackoverflow.com/a/12370499/3658919 for storing details
+    sucessful = []
+    fail = []
+
+
+class AuthenticationError(SendError):
     """
     Failed to authenticate with server
     """
-    def __init__(self, arg):
-        self.args = arg
+    pass
 
 
 class Client(object):
@@ -42,8 +51,15 @@ class Client(object):
         logging.error('reading method not implemented on generic Client class')
         raise NotImplementedError
 
+    def readings(self):
+        """
+        Return current readings
+        """
+        logging.error('readings method not implemented on generic Client class')
+        raise NotImplementedError
+
     def send_all(self):
-        logging.error('send_all method not implemented on generic Client class')
+        logging.error('send_all method not implemented on generic Client class')  # pragma: no cover
         raise NotImplementedError
 
 
@@ -89,6 +105,12 @@ class Client_0_1(Client):
                                  'sender_id': id})
         return True
 
+    def readings(self):
+        """
+        Return current readings
+        """
+        return self.samples
+
     def send_all(self):
         """
         Send all samples to server
@@ -98,23 +120,50 @@ class Client_0_1(Client):
                    'gage': {'id': self.id}}
 
         data = self.serializer.dumps(payload)
+        sucessful_ids = []
 
         r = requests.post(self.url, data=data)
 
-        print r.json()
+        try:
+            # print r.json()
+            r.json()
+        except ValueError:
+            exc = SendError('Failed to send')
+            exc.fail = self.samples
+            exc.sucessful = sucessful_ids
+            raise exc
 
+        # Check status codes to see if there was an authentication error
         if r.status_code is 401:
-            raise AuthenticationError
+            exc = AuthenticationError('Failure to Authenticate')
+            exc.fail = self.samples
+            exc.sucessful = sucessful_ids
+            raise exc
+
+        # Else we did something
         elif r.status_code is 200 and r.json()['result'] == 'created':
-            sucessful_ids = []
             for sample in r.json()['samples']:
                 sucessful_ids.append(sample['sender_id'])
-            print sucessful_ids
+            # print sucessful_ids
             samples = self.samples
             for x in range(len(samples)):
                 if samples[x]['sender_id'] in sucessful_ids:
                     self.samples.pop(x)
-            print self.samples
+
+            if len(self.samples) > 0:
+                exc = SendError('Partial send')
+                exc.fail = self.samples
+                exc.sucessful = sucessful_ids
+                raise exc
+            # print self.samples
             return (True, sucessful_ids)
 
-        return False
+        # Fail and give status code if known
+        if r.status_code:
+            exc = SendError('Unknown Send Error, HTTP Code:', r.status_code)
+        # Otherwise more generic message
+        else:
+            exc = SendError('Unknown Send Error')
+        exc.fail = self.samples
+        exc.sucessful = sucessful_ids
+        raise exc
