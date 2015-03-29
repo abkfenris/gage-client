@@ -87,6 +87,7 @@ class Client_0_1(Client):
                                  'datetime': dt,
                                  'value': value,
                                  'sender_id': id})
+        return True
 
     def send_all(self):
         """
