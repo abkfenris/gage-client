@@ -70,7 +70,15 @@ resent.
 
 .. code-block:: python
 
-    c.reading('level', str(datetime.datetime.now(), 4.4)
+    >>> c.reading('level', str(datetime.datetime.now()), 4.4)
+    True
+
+To return the current samples that the client has queued to send:
+
+.. code-block:: python
+
+    >>> c.readings()
+    [{'sender_id': 0, 'type': 'level', 'value': 4.4, 'datetime': '2015-03-28 22:16:40.485660'}]
 
 Formed JSON before getting serialized
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
