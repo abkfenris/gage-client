@@ -17,14 +17,15 @@ bad_password = 'badpassword'
 
 
 def client_0_1_response_callback(request):
-    print request.body
+    #print request.body
     try:
         payload = s.loads(request.body)
     except BadSignature:
         print 'Bad Signature'
-        return (401, {}, json.dumps({'error': 'unauthorized',
-                                     'message': 'bad signature'}))
-    print payload
+        output = {'error': 'unauthorized',
+                  'message': 'bad signature'}
+        return (401, {}, json.dumps(output))
+    #print payload
     samples = payload['samples']
     output_samples = []
     count = 0
@@ -109,8 +110,23 @@ class Test_Client_0_1_BadPassword(Test_Client_0_1):
         sensor = 'level'
         value = 4.2
         self.client.reading(sensor, datetime, value)
-        self.assertRaises(SendError, self.client.send_all)
+        self.assertRaises(AuthenticationError, self.client.send_all)
 
+class Test_Client_0_1_BadEndpoint(Test_Client_0_1):
+
+    @responses.activate
+    def testSend_All(self):
+        responses.add(
+            responses.POST, url,
+            body='eyJhbGciOiJIUzI1NiJ9.eyJnYWdlIjp7ImlkIjoxfSwic2FtcGxlcyI6',
+            content_type='application/txt',
+            status=200
+        )
+        datetime = str(dt.now())
+        sensor = 'level'
+        value = 4.2
+        self.client.reading(sensor, datetime, value)
+        self.assertRaises(SendError, self.client.send_all)
 
 if __name__ == '__main__':
     unittest.main()

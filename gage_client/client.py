@@ -125,7 +125,6 @@ class Client_0_1(Client):
         r = requests.post(self.url, data=data)
 
         try:
-            # print r.json()
             r.json()
         except ValueError:
             exc = SendError('Failed to send')
@@ -134,17 +133,16 @@ class Client_0_1(Client):
             raise exc
 
         # Check status codes to see if there was an authentication error
-        if r.status_code is 401:
+        if r.status_code == 401:
             exc = AuthenticationError('Failure to Authenticate')
             exc.fail = self.samples
             exc.sucessful = sucessful_ids
             raise exc
 
         # Else we did something
-        elif r.status_code is 200 and r.json()['result'] == 'created':
+        elif r.status_code == 200 and r.json()['result'] == 'created':
             for sample in r.json()['samples']:
                 sucessful_ids.append(sample['sender_id'])
-            # print sucessful_ids
             samples = self.samples
             for x in range(len(samples)):
                 if samples[x]['sender_id'] in sucessful_ids:
@@ -155,7 +153,6 @@ class Client_0_1(Client):
                 exc.fail = self.samples
                 exc.sucessful = sucessful_ids
                 raise exc
-            # print self.samples
             return (True, sucessful_ids)
 
         # Fail and give status code if known
