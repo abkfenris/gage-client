@@ -17,7 +17,9 @@ bad_password = 'badpassword'
 
 
 def client_0_1_response_callback(request):
-    #print request.body
+    """
+    Build up a valid response from server
+    """
     try:
         payload = s.loads(request.body)
     except BadSignature:
@@ -25,8 +27,38 @@ def client_0_1_response_callback(request):
         output = {'error': 'unauthorized',
                   'message': 'bad signature'}
         return (401, {}, json.dumps(output))
-    #print payload
     samples = payload['samples']
+    output_samples = []
+    count = 0
+    for sample in samples:
+        result_json = {
+            'datetime': sample['datetime'],
+            'id ': count,
+            'sender_id': sample['sender_id'],
+            'url': 'http://example.com/api/0.1/samples/(count)'.format(count=count),
+            'value': sample['value']
+        }
+        output_samples.append(result_json)
+
+    resp_body = {'gage': {'id': payload['gage']['id']},
+                 'result': 'created',
+                 'samples': output_samples}
+    return (200, {}, json.dumps(resp_body))
+
+
+def client_0_1_partial_response_callback(request):
+    """
+    Build up a partial response from server
+    """
+    try:
+        payload = s.loads(request.body)
+    except BadSignature:
+        print 'Bad Signature'
+        output = {'error': 'unauthorized',
+                  'message': 'bad signature'}
+        return (401, {}, json.dumps(output))
+    samples = payload['samples']
+    samples = samples[::2]  # Get every other sample to return
     output_samples = []
     count = 0
     for sample in samples:
@@ -112,6 +144,7 @@ class Test_Client_0_1_BadPassword(Test_Client_0_1):
         self.client.reading(sensor, datetime, value)
         self.assertRaises(AuthenticationError, self.client.send_all)
 
+
 class Test_Client_0_1_BadEndpoint(Test_Client_0_1):
 
     @responses.activate
@@ -126,6 +159,30 @@ class Test_Client_0_1_BadEndpoint(Test_Client_0_1):
         sensor = 'level'
         value = 4.2
         self.client.reading(sensor, datetime, value)
+        self.assertRaises(SendError, self.client.send_all)
+
+
+class Test_Client_0_1_BadResponse(Test_Client_0_1):
+
+    def setUp(self):
+        responses.reset()
+        self.client = Client(url, gage_id, bad_password)
+
+    @responses.activate
+    def testSend_All(self):
+        responses.add_callback(
+            responses.POST, url,
+            callback=client_0_1_partial_response_callback,
+            content_type='application/json'
+        )
+        datetime = str(dt.now())
+        sensor = 'level'
+        value = 4.2
+        self.client.reading(sensor, datetime, value)
+        datetime2 = str(dt.now())
+        sensor2 = 'level'
+        value2 = 4.5
+        self.client.reading(sensor2, datetime2, value2)
         self.assertRaises(SendError, self.client.send_all)
 
 if __name__ == '__main__':
