@@ -3,7 +3,9 @@ gage-client
 
 Python client to talk to gage-web
 
-.. image:: https://coveralls.io/repos/abkfenris/gage-client/badge.svg
-    :target: https://coveralls.io/r/abkfenris/gage-client
-.. image:: https://travis-ci.org/abkfenris/gage-client.svg?branch=master
+.. image:: https://img.shields.io/travis/abkfenris/gage-client.svg
     :target: https://travis-ci.org/abkfenris/gage-client
+.. image:: https://img.shields.io/coveralls/abkfenris/gage-client.svg
+    :target: https://coveralls.io/r/abkfenris/gage-client
+.. image:: https://img.shields.io/github/issues/abkfenris/gage-client.svg
+    :target: https://github.com/abkfenris/gage-client/issues
