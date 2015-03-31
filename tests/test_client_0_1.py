@@ -13,6 +13,7 @@ url_stub = 'http://riverflo.ws/api/0.1/'
 gage_id = 5
 s = JSONWebSignatureSerializer(password)
 url = url_stub + 'gages/' + str(gage_id) + '/sample'
+bad_url = 'http://riverflo.ws'
 bad_password = 'badpassword'
 
 
@@ -46,6 +47,9 @@ def client_0_1_response_callback(request):
 
 
 class Test_Client_0_1(unittest.TestCase):
+    """
+    Basic tests of Client_0_1
+    """
 
     def setUp(self):
         responses.reset()
@@ -80,6 +84,9 @@ class Test_Client_0_1(unittest.TestCase):
         self.client.send_all()
 
 class Test_Client_0_1_Ids(Test_Client_0_1):
+    """
+    Checks that the client can make readings with non sequential id numbers
+    """
 
     def testReading(self):
         datetime = str(dt.now())
@@ -94,6 +101,10 @@ class Test_Client_0_1_Ids(Test_Client_0_1):
 
 
 class Test_Client_0_1_BadPassword(Test_Client_0_1):
+    """
+    Checks that the server sends a 401 response and that the client raises an
+    Authentication error
+    """
 
     def setUp(self):
         responses.reset()
@@ -113,20 +124,18 @@ class Test_Client_0_1_BadPassword(Test_Client_0_1):
         self.assertRaises(AuthenticationError, self.client.send_all)
 
 class Test_Client_0_1_BadEndpoint(Test_Client_0_1):
+    """
+    Test when the client is given a bad endpoint
+    """
+    def setUp(self):
+        responses.reset()
+        self.client = Client(bad_url, gage_id, password)
 
-    @responses.activate
-    def testSend_All(self):
-        responses.add(
-            responses.POST, url,
-            body='eyJhbGciOiJIUzI1NiJ9.eyJnYWdlIjp7ImlkIjoxfSwic2FtcGxlcyI6',
-            content_type='application/txt',
-            status=200
-        )
-        datetime = str(dt.now())
-        sensor = 'level'
-        value = 4.2
-        self.client.reading(sensor, datetime, value)
-        self.assertRaises(SendError, self.client.send_all)
+    def testVersion(self):
+        self.assertNotEqual(self.client, Client_0_1)
+
+    testReading = None
+    testSend_All = None
 
 if __name__ == '__main__':
     unittest.main()
