@@ -13,11 +13,11 @@ url_stub = 'http://riverflo.ws/api/0.1/'
 gage_id = 5
 s = JSONWebSignatureSerializer(password)
 url = url_stub + 'gages/' + str(gage_id) + '/sample'
+bad_url = 'http://riverflo.ws'
 bad_password = 'badpassword'
 
 
 def client_0_1_response_callback(request):
-    #print request.body
     try:
         payload = s.loads(request.body)
     except BadSignature:
@@ -25,7 +25,6 @@ def client_0_1_response_callback(request):
         output = {'error': 'unauthorized',
                   'message': 'bad signature'}
         return (401, {}, json.dumps(output))
-    #print payload
     samples = payload['samples']
     output_samples = []
     count = 0
@@ -45,7 +44,37 @@ def client_0_1_response_callback(request):
     return (200, {}, json.dumps(resp_body))
 
 
+def client_0_1_partial_callback(request):
+    try:
+        payload = s.loads(request.body)
+    except BadSignature:
+        print 'Bad Signature'
+        output = {'error': 'unauthorized',
+                  'message': 'bad signature'}
+        return (401, {}, json.dumps(output))
+    samples = payload['samples'][::2]
+    output_samples = []
+    count = 0
+    for sample in samples:
+        result_json = {
+            'datetime': sample['datetime'],
+            'id ': count,
+            'sender_id': sample['sender_id'],
+            'url': 'http://example.com/api/0.1/samples/(count)'.format(count=count),
+            'value': sample['value']
+        }
+        output_samples.append(result_json)
+
+    resp_body = {'gage': {'id': payload['gage']['id']},
+                 'result': 'created',
+                 'samples': output_samples}
+    return (200, {}, json.dumps(resp_body))
+
+
 class Test_Client_0_1(unittest.TestCase):
+    """
+    Basic tests of Client_0_1
+    """
 
     def setUp(self):
         responses.reset()
@@ -73,13 +102,31 @@ class Test_Client_0_1(unittest.TestCase):
             callback=client_0_1_response_callback,
             content_type='application/json'
         )
-        datetime = str(dt.now())
-        sensor = 'level'
-        value = 4.2
-        self.client.reading(sensor, datetime, value)
+        self.client.reading('level', str(dt.now()), 4.2)
+        self.client.reading('ampherage', str(dt.now()), 375.3)
         self.client.send_all()
 
+
+class Test_Client_0_1_Partial(Test_Client_0_1):
+    """
+    Test when a server can only process a few of the responses sent
+    """
+    @responses.activate
+    def testSend_All(self):
+        responses.add_callback(
+            responses.POST, url,
+            callback=client_0_1_partial_callback,
+            content_type='application/json'
+        )
+        self.client.reading('level', str(dt.now()), 4.2)
+        self.client.reading('ampherage', str(dt.now()), 375.3)
+        self.assertRaises(SendError, self.client.send_all)
+
+
 class Test_Client_0_1_Ids(Test_Client_0_1):
+    """
+    Checks that the client can make readings with non sequential id numbers
+    """
 
     def testReading(self):
         datetime = str(dt.now())
@@ -94,6 +141,10 @@ class Test_Client_0_1_Ids(Test_Client_0_1):
 
 
 class Test_Client_0_1_BadPassword(Test_Client_0_1):
+    """
+    Checks that the server sends a 401 response and that the client raises an
+    Authentication error
+    """
 
     def setUp(self):
         responses.reset()
@@ -106,27 +157,56 @@ class Test_Client_0_1_BadPassword(Test_Client_0_1):
             callback=client_0_1_response_callback,
             content_type='application/json'
         )
-        datetime = str(dt.now())
-        sensor = 'level'
-        value = 4.2
-        self.client.reading(sensor, datetime, value)
+        self.client.reading('level', str(dt.now()), 4.2)
+        self.client.reading('ampherage', str(dt.now()), 375.3)
         self.assertRaises(AuthenticationError, self.client.send_all)
 
 class Test_Client_0_1_BadEndpoint(Test_Client_0_1):
+    """
+    Test when the client is given a bad endpoint
+    """
+    def setUp(self):
+        responses.reset()
+        self.client = Client(bad_url, gage_id, password)
 
+    def testVersion(self):
+        self.assertNotEqual(self.client, Client_0_1)
+
+    testReading = None
+    testSend_All = None
+
+
+class Test_Client_0_1_MalformedResponse(Test_Client_0_1):
+    """
+    Test when the server returns something completely random and useless
+    """
     @responses.activate
     def testSend_All(self):
         responses.add(
             responses.POST, url,
-            body='eyJhbGciOiJIUzI1NiJ9.eyJnYWdlIjp7ImlkIjoxfSwic2FtcGxlcyI6',
-            content_type='application/txt',
-            status=200
+            body='Error message', status=404,
+            content_type='application/json'
         )
-        datetime = str(dt.now())
-        sensor = 'level'
-        value = 4.2
-        self.client.reading(sensor, datetime, value)
+        self.client.reading('level', str(dt.now()), 4.2)
+        self.client.reading('ampherage', str(dt.now()), 375.3)
         self.assertRaises(SendError, self.client.send_all)
+
+
+class Test_Client_0_1_404Response(Test_Client_0_1):
+    """
+    Test when the server returns a 404
+    """
+    @responses.activate
+    def testSend_All(self):
+        responses.add(
+            responses.POST, url,
+            body='{"error": "not found"}', status=404,
+            content_type='application/json'
+        )
+        self.client.reading('level', str(dt.now()), 4.2)
+        self.client.reading('ampherage', str(dt.now()), 375.3)
+        self.assertRaises(SendError, self.client.send_all)
+
 
 if __name__ == '__main__':
     unittest.main()

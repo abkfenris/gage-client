@@ -143,11 +143,10 @@ class Client_0_1(Client):
         elif r.status_code == 200 and r.json()['result'] == 'created':
             for sample in r.json()['samples']:
                 sucessful_ids.append(sample['sender_id'])
-            samples = self.samples
-            for x in range(len(samples)):
-                if samples[x]['sender_id'] in sucessful_ids:
-                    self.samples.pop(x)
+            self.samples = [x for x in self.samples if not x['sender_id'] in sucessful_ids]
 
+            # If not everything was popped from self.samples, then there was
+            # a failure in sending
             if len(self.samples) > 0:
                 exc = SendError('Partial send')
                 exc.fail = self.samples
