@@ -18,7 +18,6 @@ bad_password = 'badpassword'
 
 
 def client_0_1_response_callback(request):
-    #print request.body
     try:
         payload = s.loads(request.body)
     except BadSignature:
@@ -26,7 +25,6 @@ def client_0_1_response_callback(request):
         output = {'error': 'unauthorized',
                   'message': 'bad signature'}
         return (401, {}, json.dumps(output))
-    #print payload
     samples = payload['samples']
     output_samples = []
     count = 0
@@ -53,25 +51,24 @@ def client_0_1_partial_callback(request):
         print 'Bad Signature'
         output = {'error': 'unauthorized',
                   'message': 'bad signature'}
-        samples = payload['samples'][::2]
-        print payload['samples']
-        print samples
-        output_samples = []
-        count = 0
-        for sample in samples:
-            result_json = {
-                'datetime': sample['datetime'],
-                'id ': count,
-                'sender_id': sample['sender_id'],
-                'url': 'http://example.com/api/0.1/samples/(count)'.format(count=count),
-                'value': sample['value']
-            }
-            output_samples.append(result_json)
+        return (401, {}, json.dumps(output))
+    samples = payload['samples'][::2]
+    output_samples = []
+    count = 0
+    for sample in samples:
+        result_json = {
+            'datetime': sample['datetime'],
+            'id ': count,
+            'sender_id': sample['sender_id'],
+            'url': 'http://example.com/api/0.1/samples/(count)'.format(count=count),
+            'value': sample['value']
+        }
+        output_samples.append(result_json)
 
-        resp_body = {'gage': {'id': payload['gage']['id']},
-                     'result': 'created',
-                     'samples': output_samples}
-        return (200, {}, json.dumps(resp_body))
+    resp_body = {'gage': {'id': payload['gage']['id']},
+                 'result': 'created',
+                 'samples': output_samples}
+    return (200, {}, json.dumps(resp_body))
 
 
 class Test_Client_0_1(unittest.TestCase):
@@ -105,10 +102,8 @@ class Test_Client_0_1(unittest.TestCase):
             callback=client_0_1_response_callback,
             content_type='application/json'
         )
-        datetime = str(dt.now())
-        sensor = 'level'
-        value = 4.2
-        self.client.reading(sensor, datetime, value)
+        self.client.reading('level', str(dt.now()), 4.2)
+        self.client.reading('ampherage', str(dt.now()), 375.3)
         self.client.send_all()
 
 
@@ -120,12 +115,12 @@ class Test_Client_0_1_Partial(Test_Client_0_1):
     def testSend_All(self):
         responses.add_callback(
             responses.POST, url,
-            callback=client_0_1_response_callback,
+            callback=client_0_1_partial_callback,
             content_type='application/json'
         )
         self.client.reading('level', str(dt.now()), 4.2)
         self.client.reading('ampherage', str(dt.now()), 375.3)
-        self.client.send_all()
+        self.assertRaises(SendError, self.client.send_all)
 
 
 class Test_Client_0_1_Ids(Test_Client_0_1):

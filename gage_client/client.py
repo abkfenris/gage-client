@@ -143,10 +143,7 @@ class Client_0_1(Client):
         elif r.status_code == 200 and r.json()['result'] == 'created':
             for sample in r.json()['samples']:
                 sucessful_ids.append(sample['sender_id'])
-            samples = self.samples
-            for i, sample in enumerate(samples):
-                if sample['sender_id'] in sucessful_ids:
-                    self.samples.pop(i)
+            self.samples = [x for x in self.samples if not x['sender_id'] in sucessful_ids]
 
             # If not everything was popped from self.samples, then there was
             # a failure in sending
