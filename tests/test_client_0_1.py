@@ -157,10 +157,8 @@ class Test_Client_0_1_BadPassword(Test_Client_0_1):
             callback=client_0_1_response_callback,
             content_type='application/json'
         )
-        datetime = str(dt.now())
-        sensor = 'level'
-        value = 4.2
-        self.client.reading(sensor, datetime, value)
+        self.client.reading('level', str(dt.now()), 4.2)
+        self.client.reading('ampherage', str(dt.now()), 375.3)
         self.assertRaises(AuthenticationError, self.client.send_all)
 
 class Test_Client_0_1_BadEndpoint(Test_Client_0_1):
@@ -176,6 +174,39 @@ class Test_Client_0_1_BadEndpoint(Test_Client_0_1):
 
     testReading = None
     testSend_All = None
+
+
+class Test_Client_0_1_MalformedResponse(Test_Client_0_1):
+    """
+    Test when the server returns something completely random and useless
+    """
+    @responses.activate
+    def testSend_All(self):
+        responses.add(
+            responses.POST, url,
+            body='Error message', status=404,
+            content_type='application/json'
+        )
+        self.client.reading('level', str(dt.now()), 4.2)
+        self.client.reading('ampherage', str(dt.now()), 375.3)
+        self.assertRaises(SendError, self.client.send_all)
+
+
+class Test_Client_0_1_404Response(Test_Client_0_1):
+    """
+    Test when the server returns a 404
+    """
+    @responses.activate
+    def testSend_All(self):
+        responses.add(
+            responses.POST, url,
+            body='{"error": "not found"}', status=404,
+            content_type='application/json'
+        )
+        self.client.reading('level', str(dt.now()), 4.2)
+        self.client.reading('ampherage', str(dt.now()), 375.3)
+        self.assertRaises(SendError, self.client.send_all)
+
 
 if __name__ == '__main__':
     unittest.main()
