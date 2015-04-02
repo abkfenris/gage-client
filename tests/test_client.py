@@ -15,8 +15,8 @@ class ClientTestCase(unittest.TestCase):
         self.client = Client(url_stub + 'gages/' + str(gage_id) + '/sample', gage_id, password)
 
     def testVersion(self):
-        print self.client
-        print type(self.client)
+        print(self.client)
+        print(type(self.client))
         self.assertNotEqual(type(self.client), Client)
 
     # def testReading(self):

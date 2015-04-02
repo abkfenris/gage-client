@@ -21,7 +21,7 @@ def client_0_1_response_callback(request):
     try:
         payload = s.loads(request.body)
     except BadSignature:
-        print 'Bad Signature'
+        print('Bad Signature')
         output = {'error': 'unauthorized',
                   'message': 'bad signature'}
         return (401, {}, json.dumps(output))
@@ -48,7 +48,7 @@ def client_0_1_partial_callback(request):
     try:
         payload = s.loads(request.body)
     except BadSignature:
-        print 'Bad Signature'
+        print('Bad Signature')
         output = {'error': 'unauthorized',
                   'message': 'bad signature'}
         return (401, {}, json.dumps(output))
@@ -89,7 +89,7 @@ class Test_Client_0_1(unittest.TestCase):
         value = 4.2
         self.client.reading(sensor, datetime, value)
         self.assertEquals(len(self.client.samples), 1)
-        print self.client.samples[0]
+        print(self.client.samples[0])
         self.assertEquals(self.client.samples[0]['type'], sensor)
         self.assertEquals(self.client.samples[0]['value'], value)
         self.assertEquals(self.client.samples[0]['datetime'], datetime)
@@ -134,7 +134,7 @@ class Test_Client_0_1_Ids(Test_Client_0_1):
         value = 4.2
         self.client.reading(sensor, datetime, value, id=1)
         self.assertEquals(len(self.client.samples), 1)
-        print self.client.samples[0]
+        print(self.client.samples[0])
         self.assertEquals(self.client.samples[0]['type'], sensor)
         self.assertEquals(self.client.samples[0]['value'], value)
         self.assertEquals(self.client.samples[0]['datetime'], datetime)
